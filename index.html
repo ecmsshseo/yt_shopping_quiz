@@ -624,22 +624,64 @@ function handleSubmit() {
 }
 
 function submitToGoogleForm(name) {
-  const SCRIPT_URL = 'https://script.google.com/a/macros/in.cd24.kr/s/AKfycbwKyu_q-jdDewXM6L-xJ4aAMYkdnxP5UjnfCuUl7ixGAOGvyRLDotoQMX06I5aWNnG9/exec';
+  const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeUviKeQDuB2DIYMbriHCIf56jhI3rYL0QJQwgyr5us39oqPQ/formResponse';
 
-  const payload = { name };
+  const FORM_ENTRIES = {
+    name: 'entry.1786745135',
+    q1: 'entry.72651859',
+    q2: 'entry.1404996533',
+    q3: 'entry.926177081',
+    q4: 'entry.309959286',
+    q5: 'entry.2019346507',
+    q6: 'entry.1502867850',
+    q7: 'entry.1086468322',
+    q8: 'entry.1244713495',
+    q9: 'entry.186303282',
+    q10: 'entry.2132590384',
+    q11: 'entry.1456606973',
+    q12: 'entry.150896847',
+    q13: 'entry.433406434',
+    q14: 'entry.416133367',
+    q15: 'entry.1703482805',
+    q16: 'entry.585341603',
+    q17: 'entry.1920025139',
+    q18: 'entry.1708354960',
+    q19: 'entry.1203265521',
+    q20: 'entry.1963754817',
+    q21: 'entry.2136014592',
+    q22: 'entry.1899536738',
+    q23: 'entry.1984138790',
+    q24: 'entry.1836469535',
+    q25: 'entry.2082303082'
+  };
+
+  const formData = new FormData();
+  formData.append(FORM_ENTRIES.name, name);
+
   for (let i = 1; i <= TOTAL; i++) {
     const checked = document.querySelector(`input[name="q${i}"]:checked`);
-    const val = checked ? checked.value : '미답변';
-    const text = checked ? getOptionText(i, val) : '미답변';
-    payload[`q${i}`] = `${val} | ${text}`;
+    if (!checked) continue;
+
+    const card = document.querySelector(`.q-card[data-q="${i}"]`);
+    const type = card.dataset.type;
+
+    let value = '';
+    if (type === 'ox') {
+      value = checked.value;
+    } else {
+      value = getOptionText(i, checked.value);
+    }
+
+    formData.append(FORM_ENTRIES[`q${i}`], value);
   }
 
-  fetch(SCRIPT_URL, {
+  fetch(GOOGLE_FORM_ACTION, {
     method: 'POST',
     mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
+    body: formData
+  }).catch((err) => {
+    console.error('Google Form submit error:', err);
+  });
 }
 
 function gradeQuiz() {

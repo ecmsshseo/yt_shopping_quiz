@@ -623,7 +623,6 @@ function handleSubmit() {
   gradeQuiz();
 }
 
-
 function submitToGoogleForm(name) {
   const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeUviKeQDuB2DIYMbriHCIf56jhI3rYL0QJQwgyr5us39oqPQ/formResponse';
 
@@ -656,31 +655,8 @@ function submitToGoogleForm(name) {
     q25: 'entry.2082303082'
   };
 
-  let iframe = document.getElementById('hidden-submit-frame');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.name = 'hidden-submit-frame';
-    iframe.id = 'hidden-submit-frame';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
-
-  const form = document.createElement('form');
-  form.action = GOOGLE_FORM_ACTION;
-  form.method = 'POST';
-  form.target = 'hidden-submit-frame';
-  form.acceptCharset = 'UTF-8';
-  form.style.display = 'none';
-
-  function addField(fieldName, value) {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = fieldName;
-    input.value = value;
-    form.appendChild(input);
-  }
-
-  addField(FORM_ENTRIES.name, name);
+  const formData = new FormData();
+  formData.append(FORM_ENTRIES.name, name);
 
   for (let i = 1; i <= TOTAL; i++) {
     const checked = document.querySelector(`input[name="q${i}"]:checked`);
@@ -696,17 +672,17 @@ function submitToGoogleForm(name) {
       value = getOptionText(i, checked.value);
     }
 
-    addField(FORM_ENTRIES[`q${i}`], value);
+    formData.append(FORM_ENTRIES[`q${i}`], value);
   }
 
-  document.body.appendChild(form);
-  form.submit();
-
-  setTimeout(() => {
-    form.remove();
-  }, 1000);
+  fetch(GOOGLE_FORM_ACTION, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: formData
+  }).catch((err) => {
+    console.error('Google Form submit error:', err);
+  });
 }
-
 
 function gradeQuiz() {
   for (let i = 1; i <= TOTAL; i++) {
@@ -749,6 +725,66 @@ function gradeQuiz() {
 document.getElementById('uname').addEventListener('input', function() {
   this.classList.remove('error');
 });
+
+
+const SCRIPT_URL = 'https://script.google.com/a/macros/in.cd24.kr/s/AKfycbw6lzXBBA4Mbbs1FjO4xwdJHKriqNkVOsz3MwADvHnn59OZjpds8Pu_QosMdv5lLTFX/exec';
+
+function getSelectedAnswerValue(q) {
+  const checked = document.querySelector(`input[name="q${q}"]:checked`);
+  if (!checked) return '';
+
+  const card = document.querySelector(`.q-card[data-q="${q}"]`);
+  const type = card.dataset.type;
+
+  if (type === 'ox') {
+    return checked.value;
+  }
+
+  return getOptionText(q, checked.value);
+}
+
+function submitToGoogleForm(name) {
+  let correctCount = 0;
+
+  for (let i = 1; i <= TOTAL; i++) {
+    const checked = document.querySelector(`input[name="q${i}"]:checked`);
+    if (checked && checked.value === ANS[`q${i}`]) {
+      correctCount++;
+    }
+  }
+
+  const wrongCount = TOTAL - correctCount;
+  const score = Math.round((correctCount / TOTAL) * 100);
+
+  const payload = {
+    name: name,
+    score: score,
+    correctCount: correctCount,
+    wrongCount: wrongCount,
+    userAgent: navigator.userAgent,
+    pageUrl: location.href
+  };
+
+  for (let i = 1; i <= TOTAL; i++) {
+    payload[`q${i}`] = getSelectedAnswerValue(i);
+  }
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.text())
+  .then(text => {
+    console.log('Apps Script response:', text);
+  })
+  .catch(err => {
+    console.error('Apps Script submit error:', err);
+  });
+}
+
 </script>
 </body>
 </html>

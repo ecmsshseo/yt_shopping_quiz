@@ -546,9 +546,6 @@ const ANS = {
   q22:'B', q23:'X', q24:'B', q25:'B'
 };
 
-const SCRIPT_URL = 'https://script.google.com/a/macros/in.cd24.kr/s/AKfycbw6lzXBBA4Mbbs1FjO4xwdJHKriqNkVOsz3MwADvHnn59OZjpds8Pu_QosMdv5lLTFX/exec';
-
-
 // 선택지 label 텍스트 추출 (선택한 보기 내용 전송용)
 function getOptionText(q, val) {
   const card = document.querySelector(`.q-card[data-q="${q}"]`);
@@ -626,23 +623,10 @@ function handleSubmit() {
   gradeQuiz();
 }
 
-function getSelectedAnswerValue(q) {
-  const checked = document.querySelector(`input[name="q${q}"]:checked`);
-  if (!checked) return '';
-
-  const card = document.querySelector(`.q-card[data-q="${q}"]`);
-  const type = card.dataset.type;
-
-  if (type === 'ox') {
-    return checked.value;
-  }
-
-  return getOptionText(q, checked.value);
-}
-
 function submitToGoogleForm(name) {
-  let correctCount = 0;
+  const SCRIPT_URL = 'https://script.google.com/a/macros/in.cd24.kr/s/AKfycbw6lzXBBA4Mbbs1FjO4xwdJHKriqNkVOsz3MwADvHnn59OZjpds8Pu_QosMdv5lLTFX/exec';
 
+  let correctCount = 0;
   for (let i = 1; i <= TOTAL; i++) {
     const checked = document.querySelector(`input[name="q${i}"]:checked`);
     if (checked && checked.value === ANS[`q${i}`]) {
@@ -653,27 +637,29 @@ function submitToGoogleForm(name) {
   const wrongCount = TOTAL - correctCount;
   const score = Math.round((correctCount / TOTAL) * 100);
 
-  const payload = {
-    name: name,
-    score: score,
-    correctCount: correctCount,
-    wrongCount: wrongCount,
-    userAgent: navigator.userAgent,
-    pageUrl: location.href
-  };
+  const params = new URLSearchParams();
+  params.append('name', name);
+  params.append('score', String(score));
+  params.append('correctCount', String(correctCount));
+  params.append('wrongCount', String(wrongCount));
+  params.append('userAgent', navigator.userAgent || '');
+  params.append('pageUrl', location.href || '');
 
   for (let i = 1; i <= TOTAL; i++) {
-    payload[`q${i}`] = getSelectedAnswerValue(i);
+    const checked = document.querySelector(`input[name="q${i}"]:checked`);
+    const val = checked ? checked.value : '';
+    const text = checked ? getOptionText(i, val) : '';
+    params.append(`q${i}`, val ? `${val} | ${text}` : '');
   }
 
   fetch(SCRIPT_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
     },
-    body: JSON.stringify(payload)
-  }).catch(err => {
+    body: params.toString()
+  }).catch((err) => {
     console.error('Apps Script submit error:', err);
   });
 }

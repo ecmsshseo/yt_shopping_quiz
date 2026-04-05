@@ -623,6 +623,7 @@ function handleSubmit() {
   gradeQuiz();
 }
 
+
 function submitToGoogleForm(name) {
   const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeUviKeQDuB2DIYMbriHCIf56jhI3rYL0QJQwgyr5us39oqPQ/formResponse';
 
@@ -655,8 +656,31 @@ function submitToGoogleForm(name) {
     q25: 'entry.2082303082'
   };
 
-  const formData = new FormData();
-  formData.append(FORM_ENTRIES.name, name);
+  let iframe = document.getElementById('hidden-submit-frame');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.name = 'hidden-submit-frame';
+    iframe.id = 'hidden-submit-frame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+
+  const form = document.createElement('form');
+  form.action = GOOGLE_FORM_ACTION;
+  form.method = 'POST';
+  form.target = 'hidden-submit-frame';
+  form.acceptCharset = 'UTF-8';
+  form.style.display = 'none';
+
+  function addField(fieldName, value) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = fieldName;
+    input.value = value;
+    form.appendChild(input);
+  }
+
+  addField(FORM_ENTRIES.name, name);
 
   for (let i = 1; i <= TOTAL; i++) {
     const checked = document.querySelector(`input[name="q${i}"]:checked`);
@@ -672,17 +696,17 @@ function submitToGoogleForm(name) {
       value = getOptionText(i, checked.value);
     }
 
-    formData.append(FORM_ENTRIES[`q${i}`], value);
+    addField(FORM_ENTRIES[`q${i}`], value);
   }
 
-  fetch(GOOGLE_FORM_ACTION, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: formData
-  }).catch((err) => {
-    console.error('Google Form submit error:', err);
-  });
+  document.body.appendChild(form);
+  form.submit();
+
+  setTimeout(() => {
+    form.remove();
+  }, 1000);
 }
+
 
 function gradeQuiz() {
   for (let i = 1; i <= TOTAL; i++) {
